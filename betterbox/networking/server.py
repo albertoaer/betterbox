@@ -1,10 +1,27 @@
+from dataclasses import dataclass
 import socket as sck
 from socket import socket
 from threading import Thread
 from types import FunctionType
-from typing import Iterator, Tuple
+from typing import Iterator, List, Tuple
 
 from .utils import read_socket, write_socket
+
+ClientId = Tuple[int, int]
+
+@dataclass
+class StoredClient:
+    """Connected client representation inside the server"""
+    client: socket
+    addr: str
+    thread: Thread
+    pos: int
+
+    def __hash__(self) -> int:
+        return hash((self.addr, self.pos))
+
+    def id(self) -> ClientId:
+        return (self.pos, hash(self))
 
 class Server:
     """
@@ -17,9 +34,10 @@ class Server:
         self.mainloop: Thread = None
         self.running: bool = False
 
-        self.clients: list = []
+        self.clients: List[StoredClient] = []
         
         self.mailbox: FunctionType = None
+        self.on_connect_callback: FunctionType = None
 
     def start(self, mailbox: FunctionType, daemon=True, backlog=5):
         self.mailbox = mailbox
@@ -29,14 +47,24 @@ class Server:
         self.mainloop = Thread(target=self.__mainloop, daemon=daemon)
         self.mainloop.start()
 
+    def on_connect(self, callback: FunctionType):
+        self.on_connect_callback = callback
+
     def __mainloop(self):
         while self.running:
+            #Client information and future position
             client, addr = self.socket.accept()
             pos, append = self.__find_empty()
-            addrstr = str(addr)
-            thread = Thread(target=self.__handle_client, args=(client, addrstr, pos))
-            if append: self.clients.append((client, addrstr, thread))
-            else: self.clients[pos] = (client, addrstr, thread)
+            #Thread and client creation
+            args = [None]
+            thread = Thread(target=self.__handle_client, args=args)
+            client = StoredClient(client, str(addr), thread, pos)
+            args[0] = client
+            #Client store
+            if append: self.clients.append(client)
+            else: self.clients[pos] = client
+            #Client actions, thread and connection notification
+            self.on_connect_callback(client.id())
             thread.start()
 
     def __find_empty(self) -> Tuple[int, bool]:
@@ -44,21 +72,27 @@ class Server:
             if i == None: return p, False
         return len(self.clients), True
 
-    def __handle_client(self, client: socket, addr: str, pos: int):
-        checksum = hash(addr)
+    def __handle_client(self, client: StoredClient):
         while self.running:
-            read_socket(client, lambda msg: self.mailbox(pos, checksum, msg))
+            read_socket(client.client, lambda msg: self.mailbox(client.id(), msg))
 
     def close(self):
         self.running = False
         self.socket.close()
 
-    def emit(self, idx: int, checksum: int, data: bytes):
-        client_info = self.clients[idx]
+    def emit(self, id: ClientId, data: bytes):
+        client_info = self.clients[id[0]]
         if client_info:
-            if hash(client_info[1]) == checksum:
-                write_socket(client_info[0], data)
+            if id == client_info.id():
+                write_socket(client_info.client, data)
+    
+    def who(self, id: ClientId):
+        client_info = self.clients[id[0]]
+        if client_info:
+            if id == client_info.id():
+                return client_info.addr
+        return None
 
-    def clients(self) -> Iterator[Tuple[socket, str, Thread]]:
+    def clients(self) -> Iterator[StoredClient]:
         for client in self.clients:
             if client: yield client

@@ -52,20 +52,24 @@ class Server:
 
     def __mainloop(self):
         while self.running:
-            #Client information and future position
-            client, addr = self.socket.accept()
-            pos, append = self.__find_empty()
-            #Thread and client creation
-            args = [None]
-            thread = Thread(target=self.__handle_client, args=args)
-            client = StoredClient(client, str(addr), thread, pos)
-            args[0] = client
-            #Client store
-            if append: self.clients.append(client)
-            else: self.clients[pos] = client
-            #Client actions, thread and connection notification
-            self.on_connect_callback(client.id())
-            thread.start()
+            try:
+                #Client information and future position
+                client, addr = self.socket.accept()
+                pos, append = self.__find_empty()
+                #Thread and client creation
+                args = [None]
+                thread = Thread(target=self.__handle_client, args=args)
+                client = StoredClient(client, str(addr), thread, pos)
+                args[0] = client
+                #Client store
+                if append: self.clients.append(client)
+                else: self.clients[pos] = client
+                #Client actions, thread and connection notification
+                self.on_connect_callback(client.id())
+                thread.start()
+            except Exception as err:
+                if self.running:
+                    raise err
 
     def __find_empty(self) -> Tuple[int, bool]:
         for p, i in enumerate(self.clients):

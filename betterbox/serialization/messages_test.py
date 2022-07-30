@@ -11,9 +11,10 @@ def test_exposed_functions_message():
 
 def test_invokation_message():
     l = 44
+    nm = "function_name"
     args = ["abc", 3]
     kwargs = {"test":8}
-    e = InvokationMessage(l, args, kwargs)
+    e = InvokationMessage(l, nm, args, kwargs)
     s = e.serialize()
     m = Message.deserialize(s)
     assert m.type == MessageType.Invokation
@@ -21,6 +22,7 @@ def test_invokation_message():
     assert m.data["retaddr"] == l
     assert m.data["args"] == args
     assert m.data["kwargs"] == kwargs
+    assert m.data["name"] == nm
 
 def test_return_value_message():
     l = 5

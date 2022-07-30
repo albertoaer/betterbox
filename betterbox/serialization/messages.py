@@ -32,8 +32,8 @@ class ExposedFunctionsMessage(Message):
         super().__init__(MessageType.ExposedFunctions, fns)
 
 class InvokationMessage(Message):
-    def __init__(self, retaddr: int, args: List, kwargs: Dict) -> None:
-        super().__init__(MessageType.Invokation, {"retaddr": retaddr, "args": args, "kwargs": kwargs})
+    def __init__(self, retaddr: int, name: str, args: List, kwargs: Dict) -> None:
+        super().__init__(MessageType.Invokation, {"retaddr": retaddr, "name": name, "args": args, "kwargs": kwargs})
 
 class ReturnValueMessage(Message):
     def __init__(self, retaddr: int, value: Any) -> None:

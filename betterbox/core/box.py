@@ -1,8 +1,13 @@
 from __future__ import annotations
 from socket import gethostbyname
 from types import FunctionType
+from typing import Type
+
+from betterbox.serialization.messages import MessageType
 
 from ..networking import Server
+from ..data_structures.reusable_list import MemberId
+from ..serialization import Message, ExposedFunctionsMessage
 
 def private(func: FunctionType):
     setattr(func, 'private', True)
@@ -25,11 +30,15 @@ class BoxServer:
         #TODO: Avoid address and family hardcoding
         self.server = Server(gethostbyname('localhost'), port)
         self.server.on_connect(self.new_connection)
-        self.server.start(self.message_handle)
+        self.server.start(lambda client, msg: self.message_handle(client, Message.deserialize(msg)))
 
-    def new_connection(self, client): pass
+    def new_connection(self, client: MemberId):
+        self.server.emit(client, ExposedFunctionsMessage(
+            list(self.box.exposed_functions.keys())).serialize())
 
-    def message_handle(self, client, msg): pass
+    def message_handle(self, client: MemberId, msg: Message):
+        if msg.type == MessageType.Invokation:
+            self.box.exposed_functions[msg.data["name"]](self.box, *msg.data["args"], **msg.data["kwargs"])
 
 class Box(metaclass=MetaBox):
     __instance: Box = None
@@ -49,8 +58,8 @@ class Box(metaclass=MetaBox):
             cls.__instance = cls()
         return cls.__instance
 
-def serve_box(port):
-    def serve_box_box(target_box: type[Box]):
+def serve_box(port: int):
+    def serve_box_box(target_box: Type[Box]):
         target_box.instance().serve_once(port)
         return target_box
     return serve_box_box

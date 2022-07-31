@@ -3,11 +3,10 @@ import socket as sck
 from socket import socket
 from threading import Thread
 from types import FunctionType
-from typing import Iterator, List, Tuple
+from typing import Iterator, Union
 
+from ..data_structures.reusable_list import MemberId, ReusableList
 from .utils import read_socket, write_socket
-
-ClientId = Tuple[int, int]
 
 @dataclass
 class StoredClient:
@@ -15,13 +14,9 @@ class StoredClient:
     client: socket
     addr: str
     thread: Thread
-    pos: int
 
     def __hash__(self) -> int:
-        return hash((self.addr, self.pos))
-
-    def id(self) -> ClientId:
-        return (self.pos, hash(self))
+        return hash(self.addr)
 
 class Server:
     """
@@ -34,7 +29,7 @@ class Server:
         self.mainloop: Thread = None
         self.running: bool = False
 
-        self.clients: List[StoredClient] = []
+        self.clients: ReusableList = ReusableList()
         
         self.mailbox: FunctionType = None
         self.on_connect_callback: FunctionType = None
@@ -53,50 +48,36 @@ class Server:
     def __mainloop(self):
         while self.running:
             try:
-                #Client information and future position
+                #Client accept
                 client, addr = self.socket.accept()
-                pos, append = self.__find_empty()
                 #Thread and client creation
-                args = [None]
-                thread = Thread(target=self.__handle_client, args=args)
-                client = StoredClient(client, str(addr), thread, pos)
-                args[0] = client
-                #Client store
-                if append: self.clients.append(client)
-                else: self.clients[pos] = client
+                idwrap = [None]
+                thread = Thread(target=self.__handle_client, args=idwrap)
+                idwrap[0] = self.clients.append(StoredClient(client, str(addr), thread))
                 #Client actions, thread and connection notification
-                self.on_connect_callback(client.id())
+                self.on_connect_callback(idwrap[0])
                 thread.start()
             except Exception as err:
                 if self.running:
                     raise err
 
-    def __find_empty(self) -> Tuple[int, bool]:
-        for p, i in enumerate(self.clients):
-            if i == None: return p, False
-        return len(self.clients), True
-
-    def __handle_client(self, client: StoredClient):
-        while self.running:
-            read_socket(client.client, lambda msg: self.mailbox(client.id(), msg))
+    def __handle_client(self, id: MemberId):
+        while self.running and (client := self.clients[id]):
+            read_socket(client.client, lambda msg: self.mailbox(id, msg))
 
     def close(self):
         self.running = False
         self.socket.close()
 
-    def emit(self, id: ClientId, data: bytes):
-        client_info = self.clients[id[0]]
-        if client_info:
-            if id == client_info.id():
-                write_socket(client_info.client, data)
+    def emit(self, id: MemberId, data: bytes):
+        if client := self.clients[id]:
+            write_socket(client.client, data)
     
-    def who(self, id: ClientId):
-        client_info = self.clients[id[0]]
-        if client_info:
-            if id == client_info.id():
-                return client_info.addr
+    def who(self, id: MemberId) -> Union[None, str]:
+        if client := self.clients[id]:
+            return client.addr
         return None
 
     def clients(self) -> Iterator[StoredClient]:
-        for client in self.clients:
+        for client in self.clients.collection:
             if client: yield client

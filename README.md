@@ -30,7 +30,7 @@ GroupBox and SpreadBox will target all the boxes when a invokation occurs, also 
 
 Invokation result is always a Promise, with methods:
 - any: gets only the first response
-- collect: gets an array of responses
+- all: gets an array of responses
 - compute: uses a custom function in order to get a single value
 
 # Syntax

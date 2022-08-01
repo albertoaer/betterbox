@@ -7,7 +7,7 @@ from betterbox.serialization.messages import MessageType
 
 from ..networking import Server
 from ..data_structures.reusable_list import MemberId
-from ..serialization import Message, ExposedFunctionsMessage
+from ..serialization import Message, ExposedFunctionsMessage, ReturnValueMessage
 
 def private(func: FunctionType):
     setattr(func, 'private', True)
@@ -38,7 +38,8 @@ class BoxServer:
 
     def message_handle(self, client: MemberId, msg: Message):
         if msg.type == MessageType.Invokation:
-            self.box.exposed_functions[msg.data["name"]](self.box, *msg.data["args"], **msg.data["kwargs"])
+            result = self.box.exposed_functions[msg.data["name"]](self.box, *msg.data["args"], **msg.data["kwargs"])
+            self.server.emit(client, ReturnValueMessage(msg.data["retaddr"], result).serialize())
 
 class Box(metaclass=MetaBox):
     __instance: Box = None

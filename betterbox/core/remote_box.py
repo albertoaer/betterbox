@@ -1,3 +1,4 @@
+from queue import Queue
 from socket import gethostbyname
 
 from .box import Box, private
@@ -5,12 +6,15 @@ from typing import Any, List, Dict, Type
 
 from ..networking import Client
 from ..data_structures.reusable_list import ReusableList, MemberId
+from ..data_structures.promise import Promise
+from ..data_structures.fixed_queue_list import FixedQueueList
 from ..serialization import Message, MessageType, InvokationMessage
 
 class BoxClient:
     def __init__(self) -> None:
         self.clients: ReusableList = ReusableList()
         self.exposed_functions: Dict[str, MemberId] = {}
+        self.returns: FixedQueueList = FixedQueueList()
 
     def include_client(self, client: Client):
         id = self.clients.append(client)
@@ -21,14 +25,17 @@ class BoxClient:
             for fn in msg.data:
                 self.exposed_functions.setdefault(fn, [])
                 self.exposed_functions[fn].append(id)
+        elif msg.type == MessageType.ReturnValue:
+            self.returns.put(msg.data['retaddr'], msg.data['value'])
     
     def try_get(self, name):
         if owners := self.exposed_functions.get(name):
             def invoke(*args, **kwargs):
+                retaddr = self.returns.reserve(len(owners))
                 for id in owners:
-                    if client := self.clients[id]: 
-                        #Solve temporal channel 0
-                        client.emit(InvokationMessage(0, name, args, kwargs).serialize())
+                    if client := self.clients[id]:
+                        client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
+                return self.returns.promise_for(retaddr)
             return invoke
         return None
 

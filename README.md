@@ -2,7 +2,7 @@
 
 Create distributed systems to run and share python code through a network
 
-# ADVISE: Everything in this `readme` is **conceptual** !
+# ADVISE: Everything in this *readme* is `conceptual` !
 # Objetives
 
 - Provide a generic distributed systems interface for sharing python code and services through a network (**The Boxes**)
@@ -16,7 +16,7 @@ Create distributed systems to run and share python code through a network
 - SandBox: Like a box but allowing code injection
 
 - RemoteBox: Represents a box that is not in the current machine
-- GroupBox: RemoteBox specialization that matches that are not in the current machine
+- GroupBox: RemoteBox specialization that matches many boxes
 - SpreadBox: GroupBox specialization for computational requirements
 
 # Always execute

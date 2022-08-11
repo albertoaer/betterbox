@@ -62,8 +62,12 @@ class Server:
                     raise err
 
     def __handle_client(self, id: MemberId):
-        while self.running and (client := self.clients[id]):
-            read_socket(client.client, lambda msg: self.mailbox(id, msg))
+        try:
+            while self.running and (client := self.clients[id]):
+                read_socket(client.client, lambda msg: self.mailbox(id, msg))
+        except Exception as err:
+            #TODO: Log err
+            self.clients.remove(id)
 
     def close(self):
         self.running = False

@@ -7,9 +7,13 @@ class ReusableList:
 
     def __init__(self) -> None:
         self.collection: List[Any] = []
-
+        
     def __len__(self) -> int:
-        return len(self.collection)
+        length = 0
+        for x in self.collection:
+            if x:
+                length += 1
+        return length
 
     def append(self, item: Any) -> MemberId:
         pos, append = self.__find_empty()

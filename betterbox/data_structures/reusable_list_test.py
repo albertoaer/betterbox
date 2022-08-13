@@ -3,12 +3,16 @@ from .reusable_list import ReusableList
 def test_append_len():
     l = ReusableList()
     first = l.append(1)
+    assert len(l.collection) == 1
     assert len(l) == 1
     l.append(2)
+    assert len(l.collection) == 2
     assert len(l) == 2
     l.remove(first)
-    assert len(l) == 2 #Phisycal size still the same
+    assert len(l.collection) == 2 #Phisycal size still the same
+    assert len(l) == 1
     l.append(3)
+    assert len(l.collection) == 2
     assert len(l) == 2
 
 def test_correct_hash():

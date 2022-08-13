@@ -1,6 +1,7 @@
 from socket import gethostbyname
 from threading import Semaphore
 from typing import Any, Iterator, List, Dict, Type
+from typing_extensions import Self
 
 from .box import Box, private
 
@@ -59,6 +60,11 @@ class RemoteBox(Box):
         for conn in connections:
             self.__client.include_client(conn)
             break
+
+    @private
+    def require(self, expected: int) -> Self:
+        assert expected <= len(self.__client.clients)
+        return self
 
     def __getattribute__(self, name: str) -> Any:
         try:

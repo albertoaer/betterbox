@@ -6,7 +6,7 @@ from types import FunctionType
 from typing import Iterator, Union
 
 from ..data_structures.reusable_list import MemberId, ReusableList
-from .utils import read_socket, write_socket
+from .protocol import *
 
 @dataclass
 class StoredClient:
@@ -34,7 +34,7 @@ class Server:
         self.mailbox: FunctionType = None
         self.on_connect_callback: FunctionType = None
 
-    def start(self, mailbox: FunctionType, daemon=True, backlog=5):
+    def start(self, mailbox: FunctionType=None, daemon=True, backlog=5):
         self.mailbox = mailbox
         
         self.socket.listen(backlog)
@@ -64,7 +64,9 @@ class Server:
     def __handle_client(self, id: MemberId):
         try:
             while self.running and (client := self.clients[id]):
-                read_socket(client.client, lambda msg: self.mailbox(id, msg))
+                action, msg = read_socket(client.client)
+                if self.mailbox:
+                    self.mailbox(id, msg)
         except Exception as err:
             #TODO: Log err
             self.clients.remove(id)
@@ -75,7 +77,7 @@ class Server:
 
     def emit(self, id: MemberId, data: bytes):
         if client := self.clients[id]:
-            write_socket(client.client, data)
+            write_socket(client.client, PROT_ACTION_APP, data)
     
     def who(self, id: MemberId) -> Union[None, str]:
         if client := self.clients[id]:

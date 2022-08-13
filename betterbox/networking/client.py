@@ -3,7 +3,7 @@ from socket import socket
 from threading import Thread
 from types import FunctionType
 
-from .utils import read_socket, write_socket
+from .protocol import *
 
 class Client:
     """
@@ -18,7 +18,7 @@ class Client:
 
         self.mailbox: FunctionType = None
 
-    def start(self, mailbox: FunctionType, daemon=True):
+    def start(self, mailbox: FunctionType=None, daemon=True):
         self.mailbox = mailbox
 
         self.client.connect(self.target)
@@ -28,10 +28,12 @@ class Client:
 
     def __mainloop(self):
         while self.running:
-            read_socket(self.client, lambda msg: self.mailbox(msg))
+            action, msg = read_socket(self.client)
+            if self.mailbox:
+                self.mailbox(msg)
 
     def close(self):
         self.client.close
 
     def emit(self, data: bytes):
-        write_socket(self.client, data)
+        write_socket(self.client, PROT_ACTION_APP, data)

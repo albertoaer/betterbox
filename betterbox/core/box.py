@@ -2,6 +2,7 @@ from __future__ import annotations
 from socket import gethostbyname
 from types import FunctionType
 from typing import Type
+from typing_extensions import Self
 
 from betterbox.serialization.messages import MessageType
 
@@ -25,10 +26,9 @@ class MetaBox(type):
 class BoxServerException(Exception): pass
 
 class BoxServer:
-    def __init__(self, box: Box, port: int) -> None:
+    def __init__(self, box: Box, addr: str, port: int) -> None:
         self.box = box
-        #TODO: Avoid address and family hardcoding
-        self.server = Server(gethostbyname('localhost'), port)
+        self.server = Server(addr, port)
         self.server.on_connect(self.new_connection)
         self.server.start(lambda client, msg: self.message_handle(client, Message.deserialize(msg)))
 
@@ -48,19 +48,26 @@ class Box(metaclass=MetaBox):
         self.__server: BoxServer = None
 
     @private
-    def serve_once(self, port: int):
+    def serve_once(self, addr: str, port: int):
         if self.__server:
             raise BoxServerException('A box can only be served once')
-        self.__server = BoxServer(self, port)
+        self.__server = BoxServer(self, addr, port)
 
     @classmethod
-    def instance(cls):
+    def instance(cls) -> Self:
         if not cls.__instance:
             cls.__instance = cls()
         return cls.__instance
 
-def serve_box(port: int):
+def serve_box(port: int, expose: bool = False):
     def serve_box_box(target_box: Type[Box]):
-        target_box.instance().serve_once(port)
+        addr = '0.0.0.0' if expose else gethostbyname('localhost')
+        target_box.instance().serve_once(addr, port)
         return target_box
     return serve_box_box
+
+def serve_box_at(port: int, addr: str):
+    def serve_box_at_box(target_box: Type[Box]):
+        target_box.instance().serve_once(addr, port)
+        return target_box
+    return serve_box_at_box

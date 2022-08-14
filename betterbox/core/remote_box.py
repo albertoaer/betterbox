@@ -31,7 +31,7 @@ class BoxClient:
         elif msg.type == MessageType.ReturnValue:
             self.returns.put(msg.data['retaddr'], msg.data['value'])
     
-    def try_get(self, name):
+    def try_get(self, name: str, error: AttributeError):
         if owners := self.exposed_functions.get(name):
             def invoke(*args, **kwargs):
                 retaddr = self.returns.reserve(len(owners))
@@ -40,7 +40,7 @@ class BoxClient:
                         client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
                 return self.returns.promise_for(retaddr)
             return invoke
-        return None
+        raise error
 
 class RemoteBox(Box):
     def __init__(self) -> None:
@@ -69,8 +69,8 @@ class RemoteBox(Box):
     def __getattribute__(self, name: str) -> Any:
         try:
             return super().__getattribute__(name)
-        except AttributeError:
-            return self.__client.try_get(name)
+        except AttributeError as err:
+            return self.__client.try_get(name, err)
         
 
 def aux_include(target_box: Type[RemoteBox], connections: Iterator[Client]) -> Type[RemoteBox]:

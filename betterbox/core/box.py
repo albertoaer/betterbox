@@ -1,7 +1,6 @@
 from __future__ import annotations
 from socket import gethostbyname
-from types import FunctionType
-from typing import Type
+from typing import Type, Callable
 from typing_extensions import Self
 
 from betterbox.serialization.messages import MessageType
@@ -10,7 +9,7 @@ from ..networking import Server
 from ..data_structures.reusable_list import MemberId
 from ..serialization import Message, ExposedFunctionsMessage, ReturnValueMessage
 
-def private(func: FunctionType):
+def private(func: Callable):
     setattr(func, 'private', True)
     return func
 

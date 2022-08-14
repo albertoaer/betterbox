@@ -1,7 +1,7 @@
 import socket as sck
 from socket import socket
 from threading import Thread
-from types import FunctionType
+from typing import Callable
 
 from .protocol import *
 
@@ -19,9 +19,9 @@ class Client:
         self.mainloop: Thread = None
         self.running: bool = False
 
-        self.mailbox: FunctionType = None
+        self.mailbox: Callable = None
 
-    def start(self, mailbox: FunctionType=None, daemon=True):
+    def start(self, mailbox: Callable=None, daemon=True):
         self.mailbox = mailbox
 
         self.client.connect(self.target)

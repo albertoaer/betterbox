@@ -1,12 +1,11 @@
 from functools import reduce
 from queue import Queue
-from types import FunctionType
-from typing import Any, List
+from typing import Any, List, Callable
 
 class ResourceExpirationException(Exception): pass
 
 class Promise:
-    def __init__(self, queue: Queue, total: int, close: FunctionType):
+    def __init__(self, queue: Queue, total: int, close: Callable):
         self.__queue = queue
         self.__total = total
         self.__close = close
@@ -23,7 +22,7 @@ class Promise:
             res.append(self.any())
         return res
 
-    def compute(self, fn: FunctionType) -> Any:
+    def compute(self, fn: Callable) -> Any:
         res = self.all()
         return reduce(fn, res)
 

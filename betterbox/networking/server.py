@@ -2,8 +2,7 @@ from dataclasses import dataclass
 import socket as sck
 from socket import socket
 from threading import Thread
-from types import FunctionType
-from typing import Iterator, Union
+from typing import Iterator, Union, Callable
 
 from ..data_structures.reusable_list import MemberId, ReusableList
 from .protocol import *
@@ -31,10 +30,10 @@ class Server:
 
         self.clients: ReusableList = ReusableList()
         
-        self.mailbox: FunctionType = None
-        self.on_connect_callback: FunctionType = None
+        self.mailbox: Callable = None
+        self.on_connect_callback: Callable = None
 
-    def start(self, mailbox: FunctionType=None, daemon=True, backlog=5):
+    def start(self, mailbox: Callable=None, daemon=True, backlog=5):
         self.mailbox = mailbox
         
         self.socket.listen(backlog)
@@ -42,7 +41,7 @@ class Server:
         self.mainloop = Thread(target=self.__mainloop, daemon=daemon)
         self.mainloop.start()
 
-    def on_connect(self, callback: FunctionType):
+    def on_connect(self, callback: Callable):
         self.on_connect_callback = callback
 
     def __mainloop(self):

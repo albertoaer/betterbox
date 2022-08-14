@@ -17,7 +17,8 @@ def private(func: FunctionType):
 class MetaBox(type):
     def __new__(cls, name, bases, dict):
         data = super().__new__(cls, name, bases, dict)
-        setattr(data, 'exposed_functions', {})
+        if not hasattr(data, 'exposed_functions'):
+            setattr(data, 'exposed_functions', {})
         for attr, obj in data.__dict__.items():
             if callable(obj) and (not hasattr(obj, 'private') or not getattr(obj, 'private')):
                 data.exposed_functions[attr] = obj

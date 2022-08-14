@@ -44,12 +44,9 @@ class BoxServer:
 class Box(metaclass=MetaBox):
     __instance: Box = None
 
-    def __init__(self) -> None:
-        self.__server: BoxServer = None
-
     @private
     def serve_once(self, addr: str, port: int):
-        if self.__server:
+        if hasattr(self, '__server'):
             raise BoxServerException('A box can only be served once')
         self.__server = BoxServer(self, addr, port)
 

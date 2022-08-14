@@ -43,10 +43,6 @@ class BoxClient:
         raise error
 
 class RemoteBox(Box):
-    def __init__(self) -> None:
-        super().__init__()
-        self.__client: BoxClient = None
-
     @private
     def include_boxes(self, connections: Iterator[Client]):
         """
@@ -55,7 +51,7 @@ class RemoteBox(Box):
 
         Maybe would be better a client iterator as input 
         """
-        if not self.__client:
+        if not hasattr(self, '__client'):
             self.__client = BoxClient()
         for conn in connections:
             self.__client.include_client(conn)
@@ -70,6 +66,7 @@ class RemoteBox(Box):
         try:
             return super().__getattribute__(name)
         except AttributeError as err:
+            if name == '__client': raise err #Special case, avoid recursion searching client
             return self.__client.try_get(name, err)
         
 

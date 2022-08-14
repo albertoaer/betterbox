@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List
-import dill
+from .serializer import serializer
 
 class NotAMessageException(Exception): pass
 
@@ -18,11 +18,11 @@ class Message:
         self.data = data
 
     def serialize(self) -> str:
-        return dill.dumps(self)
+        return serializer.dumps(self)
 
     @staticmethod
     def deserialize(str) -> Message:
-        msg = dill.loads(str)
+        msg = serializer.loads(str)
         if not isinstance(msg, Message):
             raise NotAMessageException('The strings does not represents a message')
         return msg

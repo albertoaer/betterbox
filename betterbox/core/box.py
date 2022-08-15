@@ -20,8 +20,10 @@ def do_expose(obj: Callable):
 class MetaBox(type):
     def __new__(cls, name, bases, dict):
         data = super().__new__(cls, name, bases, dict)
-        if not hasattr(data, 'exposed_functions'):
-            setattr(data, 'exposed_functions', {})
+        exposed = {}
+        if hasattr(data, 'exposed_functions'):
+            exposed.update(data.exposed_functions)
+        setattr(data, 'exposed_functions', exposed)
         for attr, obj in data.__dict__.items():
             if do_expose(obj):
                 data.exposed_functions[attr] = obj
@@ -53,8 +55,6 @@ class BoxServer:
             self.server.emit(client, msg.serialize())
 
 class Box(metaclass=MetaBox):
-    __instance: Box = None
-
     @private
     def serve_once(self, addr: str, port: int):
         if hasattr(self, '__server'):
@@ -69,9 +69,9 @@ class Box(metaclass=MetaBox):
 
     @classmethod
     def instance(cls) -> Self:
-        if not cls.__instance:
-            cls.__instance = cls()
-        return cls.__instance
+        if not '__instance' in cls.__dict__.keys():
+            setattr(cls, '__instance', cls())
+        return cls.__dict__['__instance']
 
 def serve_box(port: int, expose: bool = False):
     def serve_box_box(target_box: Type[Box]):

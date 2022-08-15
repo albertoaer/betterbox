@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, Union
+from typing import Any, Iterator, List, Tuple, Union
 
 MemberId = Tuple[int, int]
 
@@ -46,3 +46,8 @@ class ReusableList:
         for p, i in enumerate(self.collection):
             if i == None: return p, False
         return len(self.collection), True
+
+    def __iter__(self) -> Iterator[MemberId]:
+        for i in range(0, len(self.collection)):
+            if id := self.id(i):
+                yield id

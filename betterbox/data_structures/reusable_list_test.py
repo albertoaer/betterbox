@@ -1,4 +1,5 @@
 from .reusable_list import ReusableList
+import pytest
 
 def test_append_len():
     l = ReusableList()
@@ -23,3 +24,15 @@ def test_correct_hash():
     assert l.get(x) == 5
     l.remove(x)
     assert l.get(x) == None
+
+def test_iterate():
+    l = ReusableList()
+    l.append(1)
+    x = l.append(2)
+    l.append(3)
+    l.remove(x)
+    elements = iter(l)
+    assert l[next(elements)] == 1
+    assert l[next(elements)] == 3
+    with pytest.raises(StopIteration):
+        next(elements)

@@ -1,9 +1,10 @@
 from __future__ import annotations
 from socket import gethostbyname
-from typing import Type, Callable
+import traceback
+from typing import Any, Type, Callable
 from typing_extensions import Self
 
-from betterbox.serialization.messages import MessageType
+from betterbox.serialization.messages import MessageType, RegisterFunctionMessage
 
 from ..networking import Server
 from ..data_structures.reusable_list import MemberId
@@ -13,13 +14,16 @@ def private(func: Callable):
     setattr(func, 'private', True)
     return func
 
+def do_expose(obj: Callable):
+    return callable(obj) and (not hasattr(obj, 'private') or not getattr(obj, 'private'))
+
 class MetaBox(type):
     def __new__(cls, name, bases, dict):
         data = super().__new__(cls, name, bases, dict)
         if not hasattr(data, 'exposed_functions'):
             setattr(data, 'exposed_functions', {})
         for attr, obj in data.__dict__.items():
-            if callable(obj) and (not hasattr(obj, 'private') or not getattr(obj, 'private')):
+            if do_expose(obj):
                 data.exposed_functions[attr] = obj
         return data
 
@@ -29,17 +33,24 @@ class BoxServer:
     def __init__(self, box: Box, addr: str, port: int) -> None:
         self.box = box
         self.server = Server(addr, port)
-        self.server.on_connect(self.new_connection)
-        self.server.start(lambda client, msg: self.message_handle(client, Message.deserialize(msg)))
+        self.server.on_connect(self.__new_connection)
+        self.server.start(lambda client, msg: self.__message_handle(client, Message.deserialize(msg)))
 
-    def new_connection(self, client: MemberId):
+    def __new_connection(self, client: MemberId):
         self.server.emit(client, ExposedFunctionsMessage(
             list(self.box.exposed_functions.keys())).serialize())
 
-    def message_handle(self, client: MemberId, msg: Message):
-        if msg.type == MessageType.Invokation:
-            result = self.box.exposed_functions[msg.data["name"]](self.box, *msg.data["args"], **msg.data["kwargs"])
-            self.server.emit(client, ReturnValueMessage(msg.data["retaddr"], result).serialize())
+    def __message_handle(self, client: MemberId, msg: Message):
+        try:
+            if msg.type == MessageType.Invokation:
+                result = self.box.exposed_functions[msg.data["name"]](self.box, *msg.data["args"], **msg.data["kwargs"])
+                self.server.emit(client, ReturnValueMessage(msg.data["retaddr"], result).serialize())
+        except Exception as e:
+            print(f"Exception catched: {e}, {traceback.format_exc()}")
+
+    def broadcast(self, msg: Message):
+        for client in self.server.clients:
+            self.server.emit(client, msg.serialize())
 
 class Box(metaclass=MetaBox):
     __instance: Box = None
@@ -49,6 +60,12 @@ class Box(metaclass=MetaBox):
         if hasattr(self, '__server'):
             raise BoxServerException('A box can only be served once')
         self.__server = BoxServer(self, addr, port)
+
+    def __setattr__(self, name: str, value: Any):
+        super().__setattr__(name, value)
+        if do_expose(value):
+            self.exposed_functions[name] = value
+            self.__server.broadcast(RegisterFunctionMessage(name))
 
     @classmethod
     def instance(cls) -> Self:

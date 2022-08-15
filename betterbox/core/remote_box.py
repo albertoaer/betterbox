@@ -19,15 +19,18 @@ class BoxClient:
 
     def include_client(self, client: Client):
         id = self.clients.append(client)
-        client.start(lambda msg: self.handle_message(id, Message.deserialize(msg)))
+        client.start(lambda msg: self.__handle_message(id, Message.deserialize(msg)))
         self.wait_exposed_functions.acquire()
 
-    def handle_message(self, id: MemberId, msg: Message):
+    def __handle_message(self, id: MemberId, msg: Message):
         if msg.type == MessageType.ExposedFunctions:
             for fn in msg.data:
                 self.exposed_functions.setdefault(fn, [])
                 self.exposed_functions[fn].append(id)
             self.wait_exposed_functions.release()
+        elif msg.type == MessageType.RegisterFunction:
+            self.exposed_functions.setdefault(msg.data, [])
+            self.exposed_functions[msg.data].append(id)
         elif msg.type == MessageType.ReturnValue:
             self.returns.put(msg.data['retaddr'], msg.data['value'])
     

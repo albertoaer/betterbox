@@ -9,6 +9,7 @@ class MessageType(Enum):
     ExposedFunctions = 0, #Notify exposed functions
     Invokation = 1, #Invoke a exposed function
     ReturnValue = 2, #Send the return of an invokation back
+    RegisterFunction = 3 #Notify a new function have been included into the box
 
 class Message:
     __slots__ = 'type', 'data'
@@ -38,3 +39,7 @@ class InvokationMessage(Message):
 class ReturnValueMessage(Message):
     def __init__(self, retaddr: Any, value: Any) -> None:
         super().__init__(MessageType.ReturnValue, {"retaddr": retaddr, "value": value})
+
+class RegisterFunctionMessage(Message):
+    def __init__(self, name: Any) -> None:
+        super().__init__(MessageType.RegisterFunction, name)

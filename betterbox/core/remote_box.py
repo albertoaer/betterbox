@@ -47,30 +47,30 @@ class BoxClient:
 
 class RemoteBox(Box):
     @private
+    def prepare_client(self):
+        if not hasattr(self, 'client'):
+            self.client = BoxClient()
+
+    @private
     def include_boxes(self, connections: Iterator[Client]):
         """
-        From a list of found connections selects one (the first)
+        From a iterator of found connections selects one (the first)
         The rest of the found connections are discarted
-
-        Maybe would be better a client iterator as input 
         """
-        if not hasattr(self, '__client'):
-            self.__client = BoxClient()
-        for conn in connections:
-            self.__client.include_client(conn)
-            break
+        self.prepare_client()
+        self.client.include_client(next(connections))
 
     @private
     def require(self, expected: int) -> Self:
-        assert expected <= len(self.__client.clients)
+        assert expected <= len(self.client.clients)
         return self
 
     def __getattribute__(self, name: str) -> Any:
         try:
             return super().__getattribute__(name)
         except AttributeError as err:
-            if name == '__client': raise err #Special case, avoid recursion searching client
-            return self.__client.try_get(name, err)
+            if name == 'client': raise err #Special case, avoid recursion searching client
+            return self.client.try_get(name, err)
         
 
 def aux_include(target_box: Type[RemoteBox], connections: Iterator[Client]) -> Type[RemoteBox]:
@@ -79,16 +79,16 @@ def aux_include(target_box: Type[RemoteBox], connections: Iterator[Client]) -> T
 
 def use_box(port: int, interface: str):
     def use_box_box(target_box: Type[RemoteBox]):
-        return aux_include(target_box, get_available_boxes(interface, port))
+        return aux_include(target_box, iter(get_available_boxes(interface, port)))
     return use_box_box
 
 def use_know_box(port: int, *addrs: List[str]):
     def use_know_box_box(target_box: Type[RemoteBox]):
         connections = map(lambda addr: Client(addr, port), addrs)
-        return aux_include(target_box, connections)
+        return aux_include(target_box, iter(connections))
     return use_know_box_box
 
 def use_local_box(port: int):
     def use_local_box_box(target_box: Type[RemoteBox]):
-        return aux_include(target_box, [Client(gethostbyname('localhost'), port)])
+        return aux_include(target_box, iter([Client(gethostbyname('localhost'), port)]))
     return use_local_box_box

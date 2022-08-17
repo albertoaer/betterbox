@@ -1,5 +1,6 @@
 from __future__ import annotations
 from socket import gethostbyname
+from tkinter import E
 import traceback
 from typing import Any, Type, Callable
 from typing_extensions import Self
@@ -57,15 +58,15 @@ class BoxServer:
 class Box(metaclass=MetaBox):
     @private
     def serve_once(self, addr: str, port: int):
-        if hasattr(self, '__server'):
+        if hasattr(self, 'server'):
             raise BoxServerException('A box can only be served once')
-        self.__server = BoxServer(self, addr, port)
+        self.server = BoxServer(self, addr, port)
 
     def __setattr__(self, name: str, value: Any):
         super().__setattr__(name, value)
         if do_expose(value):
             self.exposed_functions[name] = value
-            self.__server.broadcast(RegisterFunctionMessage(name))
+            self.server.broadcast(RegisterFunctionMessage(name))
 
     @classmethod
     def instance(cls) -> Self:

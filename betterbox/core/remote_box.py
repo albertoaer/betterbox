@@ -1,6 +1,6 @@
 from socket import gethostbyname
 from threading import Semaphore
-from typing import Any, Iterator, List, Dict, Type
+from typing import Any, Callable, Iterator, List, Dict, Type
 from typing_extensions import Self
 
 from .box import Box, private
@@ -34,7 +34,7 @@ class BoxClient:
         elif msg.type == MessageType.ReturnValue:
             self.returns.put(msg.data['retaddr'], msg.data['value'])
     
-    def try_get(self, name: str, error: AttributeError):
+    def try_get(self, name: str) -> Callable:
         if owners := self.exposed_functions.get(name):
             def invoke(*args, **kwargs):
                 retaddr = self.returns.reserve(len(owners))
@@ -43,7 +43,20 @@ class BoxClient:
                         client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
                 return self.returns.promise_for(retaddr)
             return invoke
-        raise error
+        raise AttributeError(f'No shared method {name}')
+
+    def try_get_divided(self, name: str) -> List[Callable]:
+        if owners := self.exposed_functions.get(name):
+            invokables = []
+            for id in owners:
+                if client := self.clients[id]:
+                    def invoke(*args, **kwargs):
+                        retaddr = self.returns.reserve(1)
+                        client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
+                        return self.returns.promise_for(retaddr)
+                    invokables.append(invoke)
+            return invokables
+        raise AttributeError(f'No shared method {name}')
 
 class RemoteBox(Box):
     @private
@@ -70,7 +83,7 @@ class RemoteBox(Box):
             return super().__getattribute__(name)
         except AttributeError as err:
             if name == 'client': raise err #Special case, avoid recursion searching client
-            return self.client.try_get(name, err)
+            return self.client.try_get(name)
         
 
 def aux_include(target_box: Type[RemoteBox], connections: Iterator[Client]) -> Type[RemoteBox]:

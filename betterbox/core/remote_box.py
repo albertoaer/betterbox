@@ -1,3 +1,4 @@
+from ast import Call
 from socket import gethostbyname
 from threading import Semaphore
 from typing import Any, Callable, Iterator, List, Dict, Type
@@ -46,15 +47,17 @@ class BoxClient:
         raise AttributeError(f'No shared method {name}')
 
     def try_get_divided(self, name: str) -> List[Callable]:
+        def make_invoke(client) -> Callable:
+            def invoke(*args, **kwargs):
+                retaddr = self.returns.reserve(1)
+                client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
+                return self.returns.promise_for(retaddr)
+            return invoke
         if owners := self.exposed_functions.get(name):
             invokables = []
             for id in owners:
                 if client := self.clients[id]:
-                    def invoke(*args, **kwargs):
-                        retaddr = self.returns.reserve(1)
-                        client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
-                        return self.returns.promise_for(retaddr)
-                    invokables.append(invoke)
+                    invokables.append(make_invoke(client))
             return invokables
         raise AttributeError(f'No shared method {name}')
 

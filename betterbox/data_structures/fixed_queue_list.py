@@ -27,5 +27,5 @@ class FixedQueueList:
     def promise_for(self, id: MemberId) -> Union[Promise, None]:
         if element := self.__buffer.get(id):
             size, q = element
-            return Promise(q, size, lambda:self.close(id))
+            return Promise(q, size)
         return None

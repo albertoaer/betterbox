@@ -24,20 +24,16 @@ class PromiseBase(ABC):
         return reduce(fn, res)
 
 class Promise(PromiseBase):
-    def __init__(self, queue: Queue, total: int, close: Callable):
+    def __init__(self, queue: Queue, total: int):
         super().__init__()
         self.__queue = queue
         self.__total = total
-        self.__close = close
 
     def any(self) -> Any:
         if self.__total <= 0:
             raise ResourceExpirationException('All the Promise expected responses have been read')
         self.__total -= 1
         return self.__queue.get(block=True)
-
-    def __del__(self):
-        self.__close()
 
 class PromiseArray(PromiseBase):
     def __init__(self, promises: List[PromiseBase]) -> None:

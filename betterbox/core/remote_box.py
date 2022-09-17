@@ -7,8 +7,7 @@ from typing_extensions import Self
 from .box import Box, private
 
 from ..networking import Client, get_available_boxes
-from ..data_structures.reusable_list import ReusableList, MemberId
-from ..data_structures.fixed_queue_list import FixedQueueList
+from ..data_structures import FixedQueueList, ReusableList, MemberId
 from ..serialization import Message, MessageType, InvokationMessage
 
 class BoxClient:

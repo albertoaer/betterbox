@@ -8,7 +8,7 @@ from typing_extensions import Self
 from betterbox.serialization.messages import MessageType, RegisterFunctionMessage
 
 from ..networking import Server
-from ..data_structures.reusable_list import MemberId
+from ..data_structures import MemberId
 from ..serialization import Message, ExposedFunctionsMessage, ReturnValueMessage
 
 def private(func: Callable):

@@ -1,7 +1,7 @@
 from queue import Queue
 from typing import Any, Union
 
-from betterbox.data_structures.promise import Promise
+from .promise import Promise
 from .reusable_list import MemberId, ReusableList
 
 class FixedQueueList:

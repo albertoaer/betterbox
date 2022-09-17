@@ -5,8 +5,6 @@ from typing import Callable
 
 from .protocol import *
 
-CLIENT_TIMEOUT: float = 2
-
 class Client:
     """
     A Client is an object that connect to server in order to get services from it
@@ -14,7 +12,6 @@ class Client:
 
     def __init__(self, addr: str, port: int, family: sck.AddressFamily = sck.AF_INET) -> None:
         self.client: socket = socket(family, sck.SOCK_STREAM)
-        self.client.settimeout(CLIENT_TIMEOUT)
         self.target: tuple = (addr, port)
         self.mainloop: Thread = None
         self.running: bool = False

@@ -37,27 +37,23 @@ class BoxClient:
     def try_get(self, name: str) -> Callable:
         if owners := self.exposed_functions.get(name):
             def invoke(*args, **kwargs):
-                retaddr = self.returns.reserve(len(owners))
+                promise, retaddr = self.returns.reserve(len(owners))
                 for id in owners:
                     if client := self.clients[id]:
                         client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
-                return self.returns.promise_for(retaddr)
+                return promise
             return invoke
         raise AttributeError(f'No shared method {name}')
 
     def try_get_divided(self, name: str) -> List[Callable]:
         def make_invoke(client) -> Callable:
             def invoke(*args, **kwargs):
-                retaddr = self.returns.reserve(1)
+                promise, retaddr = self.returns.reserve(1)
                 client.emit(InvokationMessage(retaddr, name, args, kwargs).serialize())
-                return self.returns.promise_for(retaddr)
+                return promise
             return invoke
         if owners := self.exposed_functions.get(name):
-            invokables = []
-            for id in owners:
-                if client := self.clients[id]:
-                    invokables.append(make_invoke(client))
-            return invokables
+            return [make_invoke(client) for id in owners if (client := self.clients[id])]
         raise AttributeError(f'No shared method {name}')
 
 class RemoteBox(Box):

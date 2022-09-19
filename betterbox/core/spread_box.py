@@ -5,7 +5,23 @@ from ..data_structures import Promise, PromiseArray
 from .group_box import GroupBox
 
 class SpreadBox(GroupBox):
+    """
+    GroupBox specialization that supports dividing tasks between its boxes
+    """
     def spread(self, fn: Union[str, Callable], vector: List[Tuple[Tuple, Dict]], use_self: bool = False) -> Promise:
+        """
+        Each member of the 'vector' must be applied to the 'fn' operation
+
+        - fn : Union[str, Callable]
+            is ensured to exists in every client box otherwise is created
+
+        - vector : List[Tuple[Tuple, Dict]]
+            is divided between the client boxes
+
+        If the 'fn' function is a callable all the boxes must support injection
+
+        Returns a Promise    
+        """
         name = fn
         if callable(fn):
             name = fn.__name__
@@ -22,6 +38,9 @@ class SpreadBox(GroupBox):
         return PromiseArray(promises)
 
 class SpreadAdapter:
+    """
+    Auxiliar class to wrap a SpreadBox and simplify the vector generation process
+    """
     def __init__(self, target: SpreadBox, cumulative: bool = False) -> None:
         self.__target = target
         self.__arg_list: List[Tuple[Tuple, Dict]] = []

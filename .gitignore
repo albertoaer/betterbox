@@ -1,3 +1,6 @@
 __pycache__
 .*.py
 h_*.py
+betterbox.egg-info
+build
+dist

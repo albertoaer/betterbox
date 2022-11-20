@@ -33,11 +33,11 @@ class MetaBox(type):
 class BoxServerException(Exception): pass
 
 class BoxServer:
-    def __init__(self, box: Box, addr: str, port: int) -> None:
+    def __init__(self, box: Box, addr: str, port: int, daemon: bool) -> None:
         self.box = box
         self.server = Server(addr, port)
         self.server.on_connect(self.__new_connection)
-        self.server.start(lambda client, msg: self.__message_handle(client, Message.deserialize(msg)))
+        self.server.start(lambda client, msg: self.__message_handle(client, Message.deserialize(msg)), daemon=daemon)
 
     def __new_connection(self, client: MemberId):
         self.server.emit(client, ExposedFunctionsMessage(
@@ -57,10 +57,16 @@ class BoxServer:
 
 class Box(metaclass=MetaBox):
     @private
+    def serve_lock(self):
+        if hasattr(self, 'server'):
+            raise BoxServerException('Box already served')
+        self.lock = True
+
+    @private
     def serve_once(self, addr: str, port: int):
         if hasattr(self, 'server'):
             raise BoxServerException('A box can only be served once')
-        self.server = BoxServer(self, addr, port)
+        self.server = BoxServer(self, addr, port, not hasattr(self, 'lock') or not self.lock)
 
     def __setattr__(self, name: str, value: Any):
         super().__setattr__(name, value)
@@ -86,3 +92,9 @@ def serve_box_at(port: int, addr: str):
         target_box.instance().serve_once(addr, port)
         return target_box
     return serve_box_at_box
+
+def lock_box():
+    def lock_box_box(target_box: Type[Box]):
+        target_box.instance().serve_lock()
+        return target_box
+    return lock_box_box

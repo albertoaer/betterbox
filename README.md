@@ -2,81 +2,32 @@
 
 Create distributed systems to run and share python code through a network
 
-# ADVISE: Everything in this *readme* is `conceptual` !
-# Objetives
+## Code Examples
 
-- Provide a generic distributed systems interface for sharing python code and services through a network (**The Boxes**)
-- Specialize boxes in different fields such as hard computational boxes or boxes dedicated to microservices
-- Allow serialization of any python object through the network and its replication
-- Create a well-defined network protocol for boxes communication
+Checkout [code examples](examples/loop)!
 
-# Standard Boxes
+## What does Betterbox provide?
+- Isolated and abstracted behave and code through the Box system
+  - A Box is a class that works as a service
+- RPC(Remote Procedure Call) system
+  - A RemoteBox can call methods that might be run in a different host
+- Client-Server structure with behaviour inheritance
+  - A Remote Box inherit the remote functions from a Box or another RemoteBox
+- Call serialization using the [dill](https://github.com/uqfoundation/dill) library
+- Code injection using the SandBox
+  - A SandBox has a Safe and an Unsafe version
+- Parallel execution using the SpeadBox
+- TCP Server and Clients (Transparent for the user)
+- Threads for Server and Clients (Also Transparent for the user)
+- Internal safe concurrent system
 
-- Box: Default box that exports functions to the ones that inherit it
-- SandBox: Like a box but allowing code injection
+## What does Betterbox **not** provide?
+- Any kind of concurrency or exclusion safety at Boxes implementation
+  - Concurrency implementation rests on the user
+  - RPC ensures transparency between remote calls but does not ensure synchronization between threads
+  - Many clients calling one Server might be seen as many local threads calling the same method, and like so, concurrency safety is not ensured
 
-- RemoteBox: Represents a box that is not in the current machine
-- GroupBox: RemoteBox specialization that matches many boxes
-- SpreadBox: GroupBox specialization for computational requirements
 
-# Always execute
-
-If any Remote like box does not find at least one box instance in the network won't even start
-
-RemoteBox always keep the first box that responses
-GroupBox and SpreadBox will keep them all
-
-GroupBox and SpreadBox will target all the boxes when a invokation occurs, also SpreadBox can spread over the targets avoiding too much overload
-
-Invokation result is always a Promise, with methods:
-- any: gets only the first response
-- all: gets an array of responses
-- compute: uses a custom function in order to get a single value
-
-# Syntax
-
-## Server
-
-```python
-from betterbox import Box, serve_box
-
-@serve_box(8090)
-class ABox(Box):
-    def name(self) -> str: return 'MyBox'
-```
-
-## Client
-
-```python
-from betterbox import RemoteBox, use_box
-
-@use_box(8090)
-class OtherBox(RemoteBox):
-    def __init__(self):
-        print(f'I m {self.name().any()}')
-```
-
-### A client can also serve itself
-
-```python
-from betterbox import RemoteBox, serve_box, use_box
-
-@serve_box(9090)
-@use_box(8090)
-class OtherBox(RemoteBox):
-    def __init__(self):
-        print(f'I m {self.name().any()}')
-```
-
-### Persistents boxes
-
-Boxes can be loaded before being served and saved after being stopped
-
-```python
-from betterbox import Box, serve_box, persist
-
-@serve_box(8090)
-@persist('abox')
-class ABox(Box):
-    data: str
-```
+## What might Betterbox provide in the future?
+- SSL socket connection
+- Persistent Boxes

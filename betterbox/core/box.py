@@ -1,9 +1,7 @@
 from __future__ import annotations
 from socket import gethostbyname
-from tkinter import E
 import traceback
-from typing import Any, Type, Callable
-from typing_extensions import Self
+from typing import Any, Type, Callable, TypeVar
 
 from betterbox.serialization.messages import MessageType, RegisterFunctionMessage
 
@@ -55,6 +53,8 @@ class BoxServer:
         for client in self.server.clients:
             self.server.emit(client, msg.serialize())
 
+BoxT = TypeVar('BoxT', bound='Box')
+
 class Box(metaclass=MetaBox):
     @private
     def serve_lock(self):
@@ -75,26 +75,26 @@ class Box(metaclass=MetaBox):
             self.server.broadcast(RegisterFunctionMessage(name))
 
     @classmethod
-    def instance(cls) -> Self:
+    def instance(cls: Type[BoxT]) -> BoxT:
         if not '__instance' in cls.__dict__.keys():
             setattr(cls, '__instance', cls())
         return cls.__dict__['__instance']
 
 def serve_box(port: int, expose: bool = False):
-    def serve_box_box(target_box: Type[Box]):
+    def serve_box_box(target_box: Type[BoxT]) -> Type[BoxT]:
         addr = '0.0.0.0' if expose else gethostbyname('localhost')
         target_box.instance().serve_once(addr, port)
         return target_box
     return serve_box_box
 
 def serve_box_at(port: int, addr: str):
-    def serve_box_at_box(target_box: Type[Box]):
+    def serve_box_at_box(target_box: Type[BoxT]) -> Type[BoxT]:
         target_box.instance().serve_once(addr, port)
         return target_box
     return serve_box_at_box
 
 def lock_box():
-    def lock_box_box(target_box: Type[Box]):
+    def lock_box_box(target_box: Type[BoxT]) -> Type[BoxT]:
         target_box.instance().serve_lock()
         return target_box
     return lock_box_box

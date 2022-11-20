@@ -1,8 +1,6 @@
-from ast import Call
 from socket import gethostbyname
 from threading import Semaphore
-from typing import Any, Callable, Iterator, List, Dict, Type
-from typing_extensions import Self
+from typing import Any, Callable, Iterator, List, Dict, Type, TypeVar
 
 from .box import Box, private
 
@@ -56,6 +54,8 @@ class BoxClient:
             return [make_invoke(client) for id in owners if (client := self.clients[id])]
         raise AttributeError(f'No shared method {name}')
 
+RBoxT = TypeVar('RBoxT', bound='RemoteBox')
+
 class RemoteBox(Box):
     @private
     def prepare_client(self):
@@ -72,7 +72,7 @@ class RemoteBox(Box):
         self.client.include_client(next(connections))
 
     @private
-    def require(self, expected: int) -> Self:
+    def require(self, expected: int) -> RBoxT:
         assert expected <= len(self.client.clients)
         return self
 
@@ -84,22 +84,22 @@ class RemoteBox(Box):
             return self.client.try_get(name)
         
 
-def aux_include(target_box: Type[RemoteBox], connections: Iterator[Client]) -> Type[RemoteBox]:
+def aux_include(target_box: Type[RBoxT], connections: Iterator[Client]) -> Type[RBoxT]:
     target_box.instance().include_boxes(connections)
     return target_box
 
 def use_box(port: int, interface: str):
-    def use_box_box(target_box: Type[RemoteBox]):
+    def use_box_box(target_box: Type[RBoxT]) -> Type[RBoxT]:
         return aux_include(target_box, iter(get_available_boxes(interface, port)))
     return use_box_box
 
 def use_know_box(port: int, *addrs: List[str]):
-    def use_know_box_box(target_box: Type[RemoteBox]):
+    def use_know_box_box(target_box: Type[RBoxT]) -> Type[RBoxT]:
         connections = map(lambda addr: Client(addr, port), addrs)
         return aux_include(target_box, iter(connections))
     return use_know_box_box
 
 def use_local_box(port: int):
-    def use_local_box_box(target_box: Type[RemoteBox]):
+    def use_local_box_box(target_box: Type[RBoxT]) -> Type[RBoxT]:
         return aux_include(target_box, iter([Client(gethostbyname('localhost'), port)]))
     return use_local_box_box
